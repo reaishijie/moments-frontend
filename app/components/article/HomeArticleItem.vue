@@ -1,0 +1,104 @@
+<script setup lang="ts" name="HomeArticleItem">
+import type { PropType } from 'vue'
+import type { articleData } from '~/types/article';
+import { formatTime } from '~/utils/time';
+import EmojiText from '~/components/emoji/EmojiText.vue';
+
+const router = useRouter()
+
+const props = defineProps({
+  article: {
+    type: Object as PropType<articleData>,
+    required: true
+  }
+})
+const timestamp = new Date(props.article.created_at).getTime()
+const time = formatTime(timestamp)
+
+</script>
+
+<template>
+  <div class="article-item">
+    <div class="time">
+      <div class="day">{{ time.data }}</div>
+      <div class="divider">/</div>
+      <div class="month">{{ time.month }}月</div>
+    </div>
+    <div class="content">
+      <div class="media" v-if="props.article.article_images && props.article.article_images.length > 0">
+        <!-- 展示第一张图片， 后面设计其他 -->
+        <div class="image">
+          <img :src="props.article.article_images[0]?.image_url" :alt="`内容配图：${article.content?.slice(0, 20) || '文章图片'}`" loading="lazy" decoding="async">
+        </div>
+      </div>
+      <div class="content-text" @click="router.push(`/article/${props.article.id}`)">
+        <div class="text"><EmojiText :text="article.content" /></div>
+        <div class="tags" v-if="article.tags?.length">
+          <span v-for="tag in article.tags" :key="tag.id">#{{ tag.name }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+/* 每篇文章样式 */
+.article-item {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  padding: 16px;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.time {
+  display: flex;
+  align-items: center;
+  width: 60px;
+  margin-right: 20px;
+  gap: 8px;
+}
+
+.day {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.month {
+  font-size: 13px;
+  color: #7e6565;
+}
+
+.image {
+  display: flex;
+  width: 80px;
+}
+
+.image img {
+  width: 100%;
+}
+
+.content {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  font-size: small;
+}
+.content {
+  display: flex;
+}
+.text {
+  padding: 5px;
+  border-radius: 5px;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 5px;
+  color: #6cadf1;
+  font-size: 12px;
+}
+</style>

@@ -1,0 +1,148 @@
+import service from '~/api/request'
+import type { ConfigQueryParams, updateConfigData } from '~/types/admin'
+import type { adminLinkFormData } from '~/types/link'
+
+// 获取用户数
+export const getUserCount = () => {
+    return service({
+        url: '/admin/user',
+        method: 'get',
+    })
+}
+// 获取文章数
+export const getArticleCount = () => {
+    return service({
+        url: '/admin/article',
+        method: 'get',
+    })
+}
+// 获取评论数
+export const getCommentCount = () => {
+    return service({
+        url: '/admin/comment',
+        method: 'get',
+    })
+}
+
+// 获取全部评论
+export const getAllComment = (params?: Record<string, unknown>) => {
+    return service({
+        url: '/admin/allComment',
+        method: 'get',
+        params,
+    })
+}
+
+// 获取公共设置
+export const getPublicConfig = (params?: ConfigQueryParams) => {
+    return service({
+        url: '/admin/publicConfig',
+        method: 'get',
+        params,
+    })
+}
+
+// 获取登录用户可见设置
+export const getUserConfig = (params?: ConfigQueryParams) => {
+    return service({
+        url: '/admin/userConfig',
+        method: 'get',
+        params,
+    })
+}
+// 获取全部设置（需admin）
+export const getConfig = (params?: ConfigQueryParams) => {
+    return service({
+        url: '/admin/config',
+        method: 'get',
+        params,
+    })
+}
+
+// 修改全部设置（需admin）
+export const updateConfig = (data: updateConfigData) => {
+    return service({
+        url: '/admin/config',
+        method: 'patch',
+        data,
+    })
+}
+
+// 获取全部用户
+export const getAllUsers = (params?: Record<string, unknown>) => {
+    return service({
+        url: '/admin/allUsers',
+        method: 'get',
+        params,
+    })
+}
+
+// 删除用户
+export const deleteUser = (userId: string | number) => {
+    return service({
+        url: `/admin/user/${userId}`,
+        method: 'delete',
+    })
+}
+
+// 更新用户信息
+export const updateUser = (userId: string | number, data: Record<string, unknown>) => {
+    return service({
+        url: `/admin/user/${userId}`,
+        method: 'patch',
+        data,
+    })
+}
+
+// 更新评论内容
+export const updateComment = (commentId: string | number, data: { content: string }) => {
+    return service({
+        url: `/admin/comment/${commentId}`,
+        method: 'patch',
+        data,
+    })
+}
+
+// 获取全部友情链接
+export const getAllLinks = (params?: Record<string, unknown>) => {
+    return service({
+        url: '/admin/links',
+        method: 'get',
+        params,
+    })
+}
+
+// 新增友情链接
+export const createLink = (data: adminLinkFormData) => {
+    return service({
+        url: '/admin/links',
+        method: 'post',
+        data,
+    })
+}
+
+// 更新友情链接
+export const updateLink = (linkId: string | number, data: Partial<adminLinkFormData>) => {
+    return service({
+        url: `/admin/link/${linkId}`,
+        method: 'patch',
+        data,
+    })
+}
+
+// 发送系统通知
+export const sendSystemNotice = (data: { to: string | number | 'all', title: string, content: string, link?: string }) => {
+    return service({
+        url: '/admin/notices/system',
+        method: 'post',
+        data,
+    })
+}
+
+// 删除友情链接
+export const deleteLink = (linkId: string | number) => {
+    return service({
+        url: `/admin/link/${linkId}`,
+        method: 'delete',
+    })
+}

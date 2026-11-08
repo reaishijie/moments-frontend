@@ -1,0 +1,314 @@
+<script setup lang="ts" name="Media">
+import { ref, onMounted, onUnmounted, computed, reactive } from 'vue'
+import type { articleImageItem, articleVideoItem } from '~/types/article';
+import { useMessageStore } from '~/store/message';
+import Icon from '~/components/utils/VIcon.vue';
+import { Plus, TrashAltRegular } from '@vicons/fa';
+
+const messageStore = useMessageStore()
+// 改为通用组件，只要传递过来 图片数组 / 视频数组
+const props = defineProps({
+    articleImages: {
+        type: Array as () => articleImageItem[],
+        required: true
+    },
+    articleVideos: {
+        type: Array as () => articleVideoItem[],
+        required: true
+    },
+    upload: {
+        type: Boolean,
+        default: false
+    },
+    uploadNumber: {
+        type: String,
+        required: false,
+        default: ''
+    }
+})
+// 图片/视频地址统一走同源代理（/upload/** 由 Nuxt 转发到 moments-api）
+const baseUrl = computed(() => '')
+
+// 创建计算属性,而不是直接修改props
+const processedImages = computed(() => {
+    if (!props.articleImages?.length) return []
+    
+    return props.articleImages.map((i) => {
+        if (i?.image_url?.startsWith('/') && baseUrl.value) {
+            return { ...i, image_url: baseUrl.value + i.image_url }
+        }
+        return i
+    }).filter(Boolean) // 过滤掉 undefined/null
+})
+const processedVideos = computed(() => {
+    if (!props.articleVideos?.length) return []
+
+    return props.articleVideos.map((i) => {
+        const video = { ...i }
+        if (video.video_url?.startsWith('/') && baseUrl.value) {
+            video.video_url = baseUrl.value + video.video_url
+        }
+        if (video.thumbnail_url?.startsWith('/') && baseUrl.value) {
+            video.thumbnail_url = baseUrl.value + video.thumbnail_url
+        }
+        return video
+    }).filter(Boolean)
+})
+
+
+// 定义事件，用于在排序后通知父组件
+const emit = defineEmits(['update:articleImages', 'add:file', 'remove:image']);
+const draggedIndex = ref<number | null>(null);
+// 拖拽开始
+function onDragStart(index: number) {
+    if (!props.upload) return;
+    draggedIndex.value = index;
+}
+// 当拖拽经过时，必须阻止默认事件
+function onDragOver(event: DragEvent) {
+    if (!props.upload) return;
+    event.preventDefault();
+}
+// 当放置时
+function onDrop(targetIndex: number) {
+    if (!props.upload || draggedIndex.value === null || draggedIndex.value === targetIndex) {
+        return;
+    }
+
+    // 核心逻辑：计算出新的数组顺序并 emit 出去
+    const fromIndex = draggedIndex.value;
+    const newImages = [...props.articleImages]; // 复制一份，不要直接修改 prop
+
+    const fromImage = newImages[fromIndex];
+    const targetImage = newImages[targetIndex];
+    if (!fromImage || !targetImage) return;
+    newImages[fromIndex] = targetImage;
+    newImages[targetIndex] = fromImage;
+
+    // 发出事件，将排序后的完整新数组传递给父组件
+    emit('update:articleImages', newImages);
+}
+
+// 拖拽结束后清理状态
+function onDragEnd() {
+    draggedIndex.value = null;
+}
+
+
+const enlargedImage = ref<string | null>(null)
+
+const showImage = (url: string) => {
+    // if (props.upload) return;
+    enlargedImage.value = url
+}
+
+const closeImage = () => {
+    enlargedImage.value = null
+}
+
+const videoRef = ref<HTMLVideoElement | null>(null)
+const handlePlay = () => messageStore.show('播放视频', 'info', 2000)
+const handlePause = () => messageStore.show('暂停视频', 'info', 2000)
+
+onMounted(() => {
+    if (videoRef.value) {
+        videoRef.value.addEventListener('play', handlePlay)
+        videoRef.value.addEventListener('pause', handlePause)
+    }
+})
+onUnmounted(() => {
+    if (videoRef.value) {
+        videoRef.value.removeEventListener('play', handlePlay)
+        videoRef.value.removeEventListener('pause', handlePause)
+    }
+})
+
+// 单图按原始比例展示：记录每张图的自然宽高，用于判定横/竖图
+const imageSizes = reactive<Record<string, { width: number; height: number }>>({})
+function onImgLoad(e: Event, image: articleImageItem) {
+    const img = e.target as HTMLImageElement
+    if (img.naturalWidth && img.naturalHeight) {
+        imageSizes[image.image_url] = { width: img.naturalWidth, height: img.naturalHeight }
+    }
+}
+// 仅在单图时返回方向，用于布局区分
+function singleImageOrientation(image: articleImageItem): 'landscape' | 'portrait' | null {
+    if (processedImages.value.length !== 1) return null
+    const size = imageSizes[image.image_url]
+    if (!size) return null
+    return size.width > size.height ? 'landscape' : 'portrait'
+}
+</script>
+
+<template>
+    <div class="container">
+        <!-- 添加文件 -->
+        <div
+class="add-file" @click="$emit('add:file')"
+            v-if="props.upload && processedImages.length === 0 && processedVideos.length === 0">
+            <Icon>
+                <Plus />
+            </Icon>
+        </div>
+
+        <!-- 文章的图片展示 -->
+        <ul v-if="processedImages.length !== 0">
+            <li
+v-for="(image, index) in processedImages" :key="image.id" :class="{
+                'single-landscape': singleImageOrientation(image) === 'landscape',
+                'single-portrait': singleImageOrientation(image) === 'portrait'
+            }" @click="showImage(image.image_url)"
+                @dragstart="onDragStart(index)" @dragover="onDragOver" @drop="onDrop(index)" @dragend="onDragEnd">
+                <div class="image-wrapper">
+                    <img
+:src="image.image_url" :alt="`文章图片 ${index + 1}`" loading="lazy" decoding="async"
+                        @click="showImage(image.image_url)" @load="onImgLoad($event, image)" />
+                    <!-- 删除按钮 -->
+                    <button
+v-if="props.upload" type="button" class="delete-btn" aria-label="删除图片"
+                        @click.stop="$emit('remove:image', index)">
+                        <Icon><TrashAltRegular /></Icon>
+                    </button>
+                </div>
+            </li>
+            <div
+class="add-file" @click="$emit('add:file')"
+                v-if="props.upload && processedImages.length < Number(props.uploadNumber)">
+                <Icon>
+                    <Plus />
+                </Icon>
+            </div>
+        </ul>
+        <video
+v-if="processedVideos.length !== 0 && processedImages.length === 0" :src="processedVideos[0]?.video_url"
+            ref="videoRef" :poster="processedVideos[0]?.thumbnail_url" muted playsinline controls>
+        </video>
+        <div v-if="enlargedImage" class="overlay" @click="closeImage">
+            <img :src="enlargedImage" class="enlarged" alt="放大图片">
+        </div>
+    </div>
+</template>
+
+<style scoped>
+.container {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+}
+
+ul {
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+    list-style: none;
+    outline: none;
+    padding: 0;
+    margin: 0;
+    gap: 8px;
+}
+
+li {
+    list-style: none;
+    outline: none;
+    padding: 0;
+    margin: 0;
+    /* flex: 1; */
+    width: 28%;
+    aspect-ratio: 1/1;
+    cursor: pointer;
+}
+
+/* 单图按原始比例展示：横图宽 60%，竖图宽 28%，高度自适应 */
+li.single-landscape {
+    width: 60%;
+    aspect-ratio: auto;
+}
+
+li.single-portrait {
+    width: 28%;
+    aspect-ratio: auto;
+}
+
+li.single-landscape .image-wrapper,
+li.single-portrait .image-wrapper {
+    height: auto;
+}
+
+li.single-landscape img,
+li.single-portrait img {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+}
+
+img {
+    margin: 5px 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.image-wrapper {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.delete-btn {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    display: none;
+    border: none;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    text-align: center;
+}
+
+.image-wrapper:hover .delete-btn {
+    display: block;
+}
+
+.add-file {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    /* background-color: #f3f3f3; */
+    background-color: var(--color-post-bar);
+    width: 28%;
+    aspect-ratio: 1/1;
+    cursor: pointer;
+    margin: 5px 0;
+}
+
+video {
+    display: flex;
+    margin: 5px 0;
+    width: 60%;
+    height: auto;
+    object-fit: contain;
+}
+
+/* 图片放大 */
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.685);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.enlarged {
+    max-width: 90%;
+    max-height: 90%;
+    object-fit: contain;
+    /* 保持原图比例 */
+}
+</style>

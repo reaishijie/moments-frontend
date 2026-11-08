@@ -1,0 +1,7 @@
+allowBuilds:
+  esbuild: false
+
+# h3-compression 的 peer 依赖会默认装 h3 v2，而 Nitro 2.x 运行在 h3 v1 上，
+# 强制它使用与 Nuxt/Nitro 相同的 h3 版本，避免 dev 下 event.req.headers 报错。
+overrides:
+  h3-compression>h3: 1.15.11

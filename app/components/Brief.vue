@@ -1,0 +1,92 @@
+<script setup lang="ts" name="Brief">
+import { computed } from 'vue';
+import AvatarImage from '~/components/utils/AvatarImage.vue'
+import { useUserStore } from '~/store/user'
+import { useDefaultStore } from '~/store/default'
+
+const router = useRouter()
+const defaultStore = useDefaultStore()
+
+const userStore = useUserStore()
+const defaultNickname = '瞬刻'
+const defaultAvatar = '/img/avatar.jpg'
+const defaultBrief = '更简洁、更现代化的内容发布平台'
+const nickname = computed(() => {
+    return defaultStore.configs.sitename || defaultNickname
+})
+const avatar = computed(() => {
+    return defaultStore.configs.site_avatar || defaultAvatar
+})
+const brief = computed(() => {
+    return defaultStore.configs.site_brief || defaultBrief
+})
+const routerName = computed(() => {
+    return userStore.profile?.username ?? 'admin'
+})
+</script>
+
+<template>
+    <!-- 用户信息 -->
+    <div class="brief">
+        <div class="brief-img">
+            <slot name="brief-img">
+                <span>{{ nickname }}</span>
+                <AvatarImage :src="avatar" alt="avatar" @click="router.push(`/home/${routerName}`)" />
+            </slot>
+        </div>
+        <p>
+            <slot name="brief-content">
+                {{ brief }}
+            </slot>
+        </p>
+    </div>
+</template>
+
+<style scoped>
+/* 简介 */
+.brief {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    /* background-color: wheat; */
+}
+
+.brief-img {
+    display: flex;
+}
+
+.brief-img span {
+    padding: 5px;
+    color: rgb(255, 255, 255, 0.9);
+    margin-top: -35px;
+    margin-right: 10px;
+    z-index: 5;
+    font-size: large;
+    font-weight: 600;
+}
+
+/* 简介头像 */
+.brief-img img {
+    border-radius: 10%;
+    width: 60px;
+    height: 60px;
+    margin-top: -40px;
+    margin-right: 25px;
+    z-index: 5;
+}
+
+.brief-img img:hover {
+    cursor: pointer;
+}
+
+/* 简介语 */
+.brief p {
+    margin: 5px 5px 1px 5px;
+    padding: 5px;
+    font-size: smaller;
+    color: #787878;
+    font-style: italic;
+
+}
+</style>

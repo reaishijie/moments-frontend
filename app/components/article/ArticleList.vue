@@ -1,0 +1,168 @@
+<script setup lang="ts" name="ArticleList">
+import ArticleItem from './ArticleItem.vue'
+import { onMounted, onUnmounted, ref } from 'vue'
+import { useFeedStore } from '~/store/feed'
+import { useMessageStore } from '~/store/message'
+import type { createCommentData } from '~/types/comments'
+
+const route = useRoute()
+const messageStore = useMessageStore()
+const feedStore = useFeedStore()
+
+// 创建一个 ref 来引用滚动触发器元素
+const scrollTrigger = ref<HTMLElement | null>(null)
+let observer: IntersectionObserver | null = null
+const isShowInputMap = ref<Record<number, boolean>>({})
+
+// 组件挂载的时候执行
+onMounted(async () => {
+  // 首屏数据由页面在服务端注入，只有直接跳转等场景才需要补一次请求
+  if (!feedStore.articles.length) {
+    const id = messageStore.show('正在加载文章', 'loading')
+    const isSuccess = await feedStore.fetchInitialArticles()
+    if (isSuccess) {
+      messageStore.update(id, { type: 'success', text: '文章加载成功', duration: 2000 })
+    } else {
+      messageStore.update(id, { type: 'error', text: '文章加载失败', duration: 2000 })
+    }
+  }
+
+  // 创建 Intersection Observer 实例
+  observer = new IntersectionObserver(
+    async (entries) => {
+      // 当触发器元素进入视口时，entries[0].isIntersecting 会是 true
+      if (entries[0]?.isIntersecting) {
+        const id = messageStore.show('正在加载文章', 'loading')
+
+        const res = await feedStore.fetchMoreArticles()
+        // 消息通知
+        if (res?.status === 0) {
+          messageStore.update(id, { type: 'info', text: '没有更多文章了', duration: 2000 })
+        } else if (res?.status === 1) {
+          messageStore.update(id, { type: 'success', text: '文章加载成功', duration: 2000 })
+        } else {
+          messageStore.update(id, { type: 'error', text: '文章加载失败', duration: 2000 })
+        }
+      }
+    },
+    {
+      rootMargin: '0px 0px 10px 0px',
+    },
+  )
+  // 开始监听触发器元素
+  if (scrollTrigger.value) {
+    observer.observe(scrollTrigger.value)
+  }
+})
+
+onUnmounted(() => {
+  if (observer && scrollTrigger.value) {
+    observer.unobserve(scrollTrigger.value)
+  }
+})
+
+// ArticleItem事件处理
+function handleLike(articleId: number) {
+  void feedStore.toggleLike(articleId)
+}
+function toggleComment(articleId: number) {
+  isShowInputMap.value[articleId] = !isShowInputMap.value[articleId]
+}
+// 处理回复评论
+async function handleSendReply(payload: createCommentData & { onComplete?: (success: boolean) => void }) {
+  const id = messageStore.show('正在创建评论', 'loading')
+  const { onComplete, ...commentData } = payload
+  const success = await feedStore.createComment(commentData)
+  onComplete?.(success)
+  if (success) {
+    messageStore.update(id, { type: 'success', text: '评论成功', duration: 2000 })
+  } else {
+    messageStore.update(id, { type: 'error', text: '评论失败', duration: 2000 })
+  }
+}
+function handleLoadMoreComments(articleId: number) {
+  void feedStore.fetchMoreComments(articleId)
+}
+// 标签筛选走 URL，保证可分享、可被搜索引擎收录
+function handleTagFilter(tag: string) {
+  void navigateTo({ path: '/', query: { ...route.query, tag } })
+}
+function clearTagFilter() {
+  void navigateTo({ path: '/', query: {} })
+}
+</script>
+
+<template>
+  <!-- 展示内容 -->
+  <div class="article-container">
+    <div class="tag-filter" v-if="feedStore.activeTag">
+      <span>#{{ feedStore.activeTag }}</span>
+      <button type="button" @click="clearTagFilter">全部文章</button>
+    </div>
+    <ul>
+      <li v-for="article in feedStore.articles" :key="article.id">
+        <ArticleItem
+          :article="article"
+          :likers="feedStore.articleLikesMap[article.id] || []"
+          :comments="feedStore.commentsMap[article.id] || []"
+          :is-show-input="!!isShowInputMap[article.id]"
+          :has-more-comments="feedStore.commentPagination[article.id]?.hasMore ?? false"
+          :remaining-comments="feedStore.commentPagination[article.id]?.remaining ?? 0"
+          :is-loading-comments="feedStore.commentPagination[article.id]?.isLoading ?? false"
+          @like="handleLike"
+          @comment="() => toggleComment(article.id)"
+          @send-reply="handleSendReply"
+          @load-more-comments="() => handleLoadMoreComments(article.id)"
+          @tag="handleTagFilter"
+        />
+      </li>
+    </ul>
+    <div ref="scrollTrigger" class="scroll-trigger"></div>
+
+    <div v-if="feedStore.isLoading" class="status-indicator">正在加载中...</div>
+    <div v-if="!feedStore.hasMore && feedStore.articles.length > 0" class="status-indicator">- 没有更多了 -</div>
+    <div v-if="!feedStore.articles.length && !feedStore.isLoading" class="status-indicator">- 暂时还没有内容 -</div>
+  </div>
+</template>
+
+<style scoped>
+.article-container {
+  width: 100%;
+}
+
+.article-container ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.tag-filter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  color: #4E6086;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 13px;
+}
+
+.tag-filter button {
+  border: none;
+  background: transparent;
+  color: #6cadf1;
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+.scroll-trigger {
+  height: 1px;
+  margin-bottom: -20px;
+}
+
+.status-indicator {
+  font-size: smaller;
+  text-align: center;
+  color: #888;
+  padding: 1.5rem;
+}
+</style>

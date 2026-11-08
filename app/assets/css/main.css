@@ -1,0 +1,58 @@
+/* 全局css变量 */
+:root {
+  --color-bg-app: #ffffff;
+  --color-bg-outside: #f0f0f0;
+  --color-text-primary: #212121;
+  --color-text-other: #9ac3ef; /* 评论名称，AD标题*/
+  
+  --color-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --color-ad: #ebebeb;
+  --color-ad-hover: #e1e1e1;
+  /* 文章底部分割线 */
+  --color-border: #f0f2f5;
+  /* 滚动条 */
+  --color-scrollbar-thumb: skyblue;
+  --top-bar: #EAE9E9CC;
+  --color-bg-review: #ffffff;
+  --color-post-bar: #f3f3f3e8;
+  --color-profile-item-right: #0000004f;
+  --color-review-border: #dae4f28d;
+  --color-bg-notfound: #e0f7fa;
+}
+.dark-mode {
+  --color-bg-app: #191919;
+  --color-bg-outside: #202020;
+  --color-text-primary: #e0e0e0;
+
+  --color-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --color-ad: #3c3b3b;
+  --color-ad-hover: #575656;
+  --color-border: #424242;
+  --color-scrollbar-thumb: #616161;
+  --top-bar: #202020;
+  --color-bg-review: #000;
+  --color-post-bar: #3c3b3b;
+  --color-profile-item-right: #e0e0e0;
+  --color-review-border: #dae4f228;
+  --color-bg-notfound: #131111;
+
+}
+
+* {
+  box-sizing: border-box;
+}
+body {
+  color: var(--color-text-primary);
+  margin: 0;
+  padding: 0;
+  scroll-behavior: smooth;
+}
+::-webkit-scrollbar {
+  width: 5px; /* 滚动条的宽度 */
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-scrollbar-thumb);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: wheat; /* 悬停颜色 */
+}

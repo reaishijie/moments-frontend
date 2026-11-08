@@ -1,0 +1,104 @@
+import type { Comment } from './comments'
+
+export interface articleImageItem {
+    id?: string,
+    article_id?: string,
+    image_url: string,
+    sort_order?: number,
+    created_at?: string
+}
+export interface articleVideoItem {
+    id?: string,
+    article_id?: string,
+    video_url: string,
+    thumbnail_url?: string,
+    duration?: string,
+    sort_order?: number,
+    created_at?: string
+}
+export interface articleTagItem {
+    id: string,
+    name: string
+}
+export interface articleData {
+    id: number,
+    user_id: number,
+    nickname: string,
+    avatar: string,
+    content: string,
+    type: number,
+    is_top?: boolean,
+    is_ad?: boolean,
+    ad_title: string,
+    ad_url: string,
+    isLiked?: boolean,
+    like_count: number,
+    comment_count: number,
+    location?: string,
+    status?: number,
+    created_at: string,
+    updated_at?: string,
+    user: {
+        id: string,
+        username: string,
+        nickname: string,
+        avatar: string,
+    },
+    article_images: articleImageItem[],
+    article_videos: articleVideoItem[],
+    tags: articleTagItem[],
+    // 列表接口聚合返回的点赞人预览、初始评论与评论总数（详情接口不返回）
+    likers?: Liker[],
+    comments?: Comment[],
+    comment_total?: number
+}
+
+export interface Liker {
+    id: string,
+    displayName: string,
+    username: string,
+    avatar: string
+}
+
+export interface createArticleData {
+    content: string,
+    status: number,
+    location?: string,
+    isTop?: boolean,
+    isAd?: boolean,
+    adTitle?: string,
+    adUrl?: string,
+    type?: number,
+    imageUrls?: string[],
+    videoUrls?: string[],
+    thumbnail_url?: string,
+    tags?: string[],
+    captchaProof?: string
+}
+
+export interface updateArticleData {
+    content?: string,
+    status?: number,
+    location?: string,
+    type?: number,
+    isAd?: boolean,
+    isTop?: boolean,
+    adTitle?: string,
+    adUrl?: string,
+    imageUrls?: string[],
+    videoUrls?: string[],
+    thumbnail_url?: string,
+    tags?: string[],
+    captchaProof?: string
+}
+
+export interface articleFilter {
+    articleId?: string,
+    userId?: string,
+    content?: string,
+    location?: string,
+    type?: number,
+    isTop?: boolean,
+    isAd?: boolean,
+    tag?: string
+}
